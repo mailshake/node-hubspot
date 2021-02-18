@@ -11,7 +11,7 @@ declare class List {
 
   delete(id: number): RequestPromise
 
-  getContacts(id: number): RequestPromise
+  getContacts(id: number, opts?: {}): RequestPromise
 
   getRecentContacts(id: number): RequestPromise
 
