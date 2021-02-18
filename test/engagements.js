@@ -2,12 +2,13 @@ const chai = require('chai')
 const expect = chai.expect
 
 const Hubspot = require('..')
-const hubspot = new Hubspot({ apiKey: 'demo' })
+const fakeHubspotApi = require('./helpers/fake_hubspot_api')
+let hubspot = new Hubspot({ apiKey: process.env.HUBSPOT_API_KEY || 'demo' })
 
-describe('Engagements', function() {
-  describe('Get All Engagements', function() {
-    it('Should return engagement properties', function() {
-      return hubspot.engagements.get().then(data => {
+describe('Engagements', () => {
+  describe('Get All Engagements', () => {
+    it('Should return engagement properties', () => {
+      return hubspot.engagements.get().then((data) => {
         expect(data).to.be.an('object')
         expect(data.results).to.be.a('array')
         expect(data.results[0]).to.have.a.property('engagement')
@@ -15,9 +16,10 @@ describe('Engagements', function() {
     })
   })
 
-  describe('Get Recent Engagements', function() {
-    it('Should return engagement properties', function() {
-      return hubspot.engagements.getRecentlyModified().then(data => {
+  describe('Get Recent Engagements', () => {
+    // Required additional preconditions
+    xit('Should return resent engagement properties', () => {
+      return hubspot.engagements.getRecentlyModified().then((data) => {
         expect(data).to.be.an('object')
         expect(data.results).to.be.a('array')
         expect(data.results[0]).to.have.a.property('engagement')
@@ -26,14 +28,56 @@ describe('Engagements', function() {
     })
   })
 
-  describe('Get Call Dispositions', function() {
-    it('Should return a list of call dispositions', function() {
-      return hubspot.engagements.getCallDispositions().then(data => {
+  describe('Get Call Dispositions', () => {
+    it('Should return a list of call dispositions', () => {
+      return hubspot.engagements.getCallDispositions().then((data) => {
         expect(data).to.be.an('array')
         expect(data[0]).to.have.a.property('id')
         expect(data[0]).to.have.a.property('label')
       })
     })
+  })
+
+  describe('update', () => {
+    const engagementId = 'fake_engagement_id'
+    const clientProperties = {
+      clientId: 'fake_client_id',
+      clientSecret: 'fake_client_secret',
+      redirectUri: 'some-redirect-uri',
+      refreshToken: 'a_fake_refresh_token',
+      accessToken: 'a_fake_access_token',
+    }
+    const expectedResponse = {
+      updated: true,
+    }
+    const engagementsBody = {
+      engagement: {
+        ownerId: 1,
+        timestamp: 1409172644778,
+      },
+      metadata: {
+        body: 'a new note body',
+      },
+    }
+    const engagementsEndpoint = {
+      path: `/engagements/v1/engagements/${engagementId}`,
+      request: engagementsBody,
+      response: expectedResponse,
+    }
+    fakeHubspotApi.setupServer({ patchEndpoints: [engagementsEndpoint] })
+
+    if (process.env.NOCK_OFF) {
+      it('will not run with NOCK_OFF set to true. See commit message.')
+    } else {
+      it('should update engagement', () => {
+        hubspot = new Hubspot(clientProperties)
+
+        return hubspot.engagements.update(engagementId, engagementsBody).then((data) => {
+          expect(data).to.be.an('object')
+          expect(data).to.be.deep.equal(expectedResponse)
+        })
+      })
+    }
   })
 
   // Test too brittle. First contactId doesn't necessarily has engagement

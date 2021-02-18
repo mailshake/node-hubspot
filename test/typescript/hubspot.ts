@@ -3,7 +3,7 @@ import { RequestError } from 'request-promise/errors'
 
 const apiKeyOptions: ApiOptions = { apiKey: 'demo' }
 
-const handleResponse = response => {
+const handleResponse = (response) => {
   console.log(response)
 }
 
@@ -17,7 +17,4 @@ const handleError = (requestError: RequestError) => {
 
 const hubspot = new Hubspot(apiKeyOptions)
 
-hubspot.companies
-  .get({ limit: 1 })
-  .then(handleResponse)
-  .catch(handleError)
+hubspot.companies.get({ limit: 1 }).then(handleResponse).catch(handleError)

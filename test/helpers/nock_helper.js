@@ -1,21 +1,17 @@
 const nock = require('nock')
 
-const mockEndpoint = ({
-  path,
-  response,
-  responseError,
-  verb,
-  request,
-  query = {},
-  statusCode = 200,
-}) => {
+let basePath = 'https://api.hubapi.com'
+
+const mockEndpoint = ({ path, response, responseError, verb, request, query = {}, statusCode = 200, endpointPath }) => {
   if (responseError) {
-    nock('http://api.hubapi.com', { encodedQueryParams: true })
+    nock(endpointPath || basePath, { encodedQueryParams: true })
+      // .log(console.log)
       .intercept(path, verb, request)
       .query(query)
       .replyWithError(responseError)
   } else {
-    nock('http://api.hubapi.com', { encodedQueryParams: true })
+    nock(endpointPath || basePath, { encodedQueryParams: true })
+      // .log(console.log)
       .intercept(path, verb, request)
       .query(query)
       .reply(statusCode, response)
@@ -25,6 +21,16 @@ const mockEndpoint = ({
 class NockHelper {
   disableNetConnect() {
     nock.disableNetConnect()
+  }
+
+  setBasePath(path) {
+    if (path) {
+      basePath = path
+    }
+  }
+
+  clearBasePath() {
+    basePath = 'https://api.hubapi.com'
   }
 
   mockRateLimit() {
@@ -41,7 +47,7 @@ class NockHelper {
           resetsAt: Date.now() + 24 * 60 * 60 * 1000,
         },
       ],
-      query: { hapikey: 'demo' },
+      query: { hapikey: process.env.HUBSPOT_API_KEY || 'demo' },
     })
   }
 
@@ -57,6 +63,11 @@ class NockHelper {
 
   mockPutEndpoint(parameters) {
     parameters.verb = 'PUT'
+    mockEndpoint(parameters)
+  }
+
+  mockPatchEndpoint(parameters) {
+    parameters.verb = 'PATCH'
     mockEndpoint(parameters)
   }
 

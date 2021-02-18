@@ -18,9 +18,9 @@ npm install hubspot
 
 ```javascript
 const Hubspot = require('hubspot')
-const hubspot = new Hubspot({ 
+const hubspot = new Hubspot({
   apiKey: 'abc',
-  checkLimit: false // (Optional) Specify whether or not to check the API limit on each call. Default: true 
+  checkLimit: false // (Optional) Specify whether to check the API limit on each call. Default: true
 })
 ```
 
@@ -88,6 +88,13 @@ hubspot.contacts
 ```
 
 [promise]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise
+
+
+## Samples
+
+Please see repository with [samples] applications with common cases.
+
+[samples]: https://github.com/HubSpot/integration-examples-nodejs
 
 ## {EXAMPLE} Create Contact
 
@@ -165,6 +172,7 @@ hubspot.companies.properties.groups.upsert(data)
 
 ```javascript
 hubspot.contacts.get(opts)
+hubspot.contacts.getAll(opts)
 hubspot.contacts.getByEmail(email)
 hubspot.contacts.getByEmailBatch(emails)
 hubspot.contacts.getById(id)
@@ -178,7 +186,12 @@ hubspot.contacts.search(query)
 hubspot.contacts.getRecentlyCreated()
 hubspot.contacts.getRecentlyModified()
 hubspot.contacts.createOrUpdate(email, data)
+hubspot.contacts.updateByEmail(email, data)
 hubspot.contacts.delete(id)
+hubspot.contacts.merge(primaryId, secondaryId)
+
+// Add a secondary email address to a contact
+hubspot.contacts.addSecondaryEmail(vid, secondaryEmail)
 ```
 
 ### Contact properties
@@ -199,6 +212,17 @@ hubspot.contacts.properties.deleteGroup(name)
 hubspot.contacts.properties.delete(name)
 ```
 
+### CRM associations
+
+```javascript
+hubspot.crm.associations.create(data)
+hubspot.crm.associations.createBatch(data)
+hubspot.crm.associations.delete(data)
+hubspot.crm.associations.deleteBatch(data)
+// not an official API, wrapper doing two API calls. Callbacks not supported at
+// this time
+```
+
 ### Pages
 
 ```javascript
@@ -216,6 +240,7 @@ hubspot.deals.getById(id)
 hubspot.deals.getAssociated(objectType, objectId, opts)
 hubspot.deals.deleteById(id)
 hubspot.deals.updateById(id, data)
+hubspot.deals.updateBatch(data)
 hubspot.deals.create(data)
 hubspot.deals.associate(id, objectType, associatedObjectId)
 hubspot.deals.removeAssociation(id, objectType, associatedObjectId)
@@ -240,6 +265,7 @@ hubspot.deals.properties.groups.get(query) // query is optional
 hubspot.deals.properties.groups.create(data)
 hubspot.deals.properties.groups.update(name, data)
 hubspot.deals.properties.groups.upsert(data)
+hubspot.deals.properties.groups.delete(name)
 // not an official API, wrapper doing two API calls. Callbacks not supported at
 // this time
 ```
@@ -249,6 +275,7 @@ hubspot.deals.properties.groups.upsert(data)
 ```javascript
 hubspot.engagements.create(data)
 hubspot.engagements.get(opts)
+hubspot.engagements.update(engagementId, data)
 hubspot.engagements.getRecentlyModified(opts)
 hubspot.engagements.getAssociated(objectType, objectId, opts)
 hubspot.engagements.getCallDispositions()
@@ -271,11 +298,14 @@ hubspot.pipelines.get(opts)
 ```javascript
 hubspot.lists.get(opts)
 hubspot.lists.getOne(id)
+hubspot.lists.getByIdBatch(ids)
 hubspot.lists.create(data)
 hubspot.lists.delete(id)
 hubspot.lists.getContacts(id, opts)
 hubspot.lists.getRecentContacts(id, opts)
+hubspot.lists.getRecentUpdates(opts)
 hubspot.lists.addContacts(id, contactBody)
+hubspot.lists.removeContacts(id, contactBody)
 ```
 
 ### Files
@@ -283,12 +313,32 @@ hubspot.lists.addContacts(id, contactBody)
 ```javascript
 hubspot.files.get()
 hubspot.files.getOne(id)
+hubspot.files.upload(fileDetails, overwrite, hidden)
+hubspot.files.uploadByUrl(fileDetails, overwrite, hidden)
+```
+
+### Forms
+
+```javascript
+hubspot.forms.get(opts)
+hubspot.forms.getById(id)
+hubspot.forms.getSingleField(guid, fieldname)
+hubspot.forms.getSubmissions(guid, opts)
+hubspot.forms.create(data)
+hubspot.forms.update(id, data)
+hubspot.forms.delete(id)
+
+hubspot.forms.submit(portalId, formId, data)
+
+hubspot.forms.getUploadedFileByUrl(url)
 ```
 
 ### Email
 
 ```javascript
 hubspot.subscriptions.get(opts)
+hubspot.subscriptions.subscribeToAll(email)
+hubspot.subscriptions.unsubscribe(email)
 ```
 
 ### Email Events
@@ -300,13 +350,29 @@ hubspot.campaigns.getOne(id)
 hubspot.campaigns.events(opts)
 ```
 
+### Marketing Email
+
+```javascript
+hubspot.marketingEmail.get(opts)
+hubspot.marketingEmail.getById(id)
+hubspot.marketingEmail.create(data)
+hubspot.marketingEmail.update(id, data)
+hubspot.marketingEmail.clone(id, data)
+hubspot.marketingEmail.delete(id)
+hubspot.marketingEmail.versions(id)
+hubspot.marketingEmail.restore(id)
+hubspot.marketingEmail.hasBufferedChanges(id)
+hubspot.marketingEmail.statistics(opts)
+hubspot.marketingEmail.statisticsById(id)
+```
+
 ### Social Media
 
 ```javascript
 hubspot.broadcasts.get(opts)
 ```
 
-### Timeline
+### Timelines
 
 ```javascript
 // setup for timeline events
@@ -344,14 +410,32 @@ from the resolved promise.
 hubspot.emails.sendTransactionalEmail(data)
 ```
 
+### Workflows
+
+```javascript
+hubspot.workflows.getAll()
+hubspot.workflows.get(workflowId)
+hubspot.workflows.create(data)
+hubspot.workflows.delete(workflowId)
+hubspot.workflows.enroll(workflowId, email)
+hubspot.workflows.unenroll(workflowId, email)
+hubspot.workflows.current(contactId)
+```
+
 ### OAuth
 
+```javascript
+hubspot.oauth.getAuthorizationUrl(opts)
+hubspot.oauth.getAccessToken(data)
+hubspot.oauth.refreshAccessToken()
+hubspot.oauth.getPortalInfo(token)
+```
 #### Obtain your authorization url
 
 ```javascript
 const params = {
   client_id: 'your_client_id',
-  scopes: 'some scopes',
+  scope: 'some scopes',
   redirect_uri: 'take_me_to_the_ballpark',
 }
 const uri = hubspot.oauth.getAuthorizationUrl(params)
@@ -383,6 +467,96 @@ const params = {
 const hubspot = new Hubspot(params)
 return hubspot.oauth.getAccessToken(params).then(...)
 ```
+
+### Tickets
+
+```javascript
+const data = [
+  {
+    name: 'subject',
+    value: 'This is an example ticket'
+  },
+  {
+    name: 'content',
+    value: 'Here are the details of the ticket.'
+  },
+  {
+    name: 'hs_pipeline',
+    value: '0'
+  },
+  {
+    name: 'hs_pipeline_stage',
+    value: '1'
+  }
+];
+const ids = [176606, 177919];
+const properties = ['subject', 'content', 'hs_pipeline'];
+const newDataId = [
+    {
+      objectId: 176606,
+      properties: [
+        {
+          name: 'subject',
+          value: 'SUBJECT 001'
+        },
+        {
+          name: 'content',
+          value: 'TICKET 001'
+        }
+      ]
+    },
+    {
+      objectId: 177919,
+      properties: [
+        {
+          name: 'subject',
+          value: 'SUBJECT 002'
+        },
+        {
+          name: 'content',
+          value: 'TICKET 002'
+        }
+      ]
+    }
+  ];
+
+hubspot.tickets.create(data);
+hubspot.tickets.createBatch(data);
+hubspot.tickets.getAll();
+hubspot.tickets.getAll(properties);
+hubspot.tickets.getById(id);
+hubspot.tickets.getById(id, properties);
+hubspot.tickets.getBatchById(ids);
+hubspot.tickets.getBatchById(ids, properties);
+hubspot.tickets.delete(id);
+hubspot.tickets.deleteBatch(ids);
+hubspot.tickets.update(id, newData);
+hubspot.tickets.updateBatch(newDataId);
+```
+
+## Not wrapped endpoint(s)
+
+It is possible to access the hubspot request method directly,
+it could be handy if wrapper doesn't have implementation for some endpoint yet.
+Using of exposed request method benefits by the bottleneck throttling, auth and request parsing and formatting already in place
+
+```javascript
+hubspot.apiRequest({
+            method: 'PUT',
+            path: '/some/api/not/wrapped/yet',
+            body: { key: 'value' },
+          })
+```
+
+Also it is possible to overlap hubspot base API URL using `overlapUrl` parameter
+
+```javascript
+hubspot.apiRequest({
+            method: 'GET',
+            overlapUrl: 'https://api.hubspot.com/some/alternative/api',
+          })
+```
+
 
 ## Typescript
 
@@ -416,7 +590,8 @@ pass.
 If you haven't already, create a [developer account] on hubspot. You'll want to
 [create an app] and a [test account] as well. Then, create a new file, `.env` in
 the root of the repo. Inside you'll need to add an [app id], a HubSpot user id,
-and an [oauth access token];
+and an [oauth access token], also you will need to provide [api key] and
+set some [workflow id];
 
 NOTE: Your HubSpot user ID; This can be found in the same place as your
 Developer HAPIkey in your Developer portal.
@@ -426,11 +601,15 @@ Developer HAPIkey in your Developer portal.
 [test account]: https://developers.hubspot.com/docs/faq/how-do-i-create-a-test-account
 [app id]: https://developers.hubspot.com/docs/faq/how-do-i-find-the-app-id
 [oauth access token]: https://developers.hubspot.com/docs/methods/oauth2/oauth2-overview
+[api key]: https://developers.hubspot.com/docs/faq/developer-hapikeys
+[workflow id]: https://developers.hubspot.com/docs/methods/workflows/workflows_overview
 
 ```.env
 APPLICATION_ID=111111
 USER_ID=2222222
 ACCESS_TOKEN=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA_BBB_CCCC_____-D_EEEEEEEEEEEEEEEEEEEEEEE_fffffff-gggggg"
+HUBSPOT_API_KEY=1111-2222-3333-4444-5555
+TEST_WORKFLOW_ID=333
 ```
 
 To get an access token, you should follow the [instructions here] after cloning

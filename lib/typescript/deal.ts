@@ -8,7 +8,7 @@ declare class Deal {
 
   getRecentlyModified(opts?: {}): RequestPromise
 
-  getById(id: number): RequestPromise
+  getById(id: number, opts?: {}): RequestPromise
 
   getAssociated(objectType: string, objectId: number, opts?: {}): RequestPromise
 
@@ -18,17 +18,11 @@ declare class Deal {
 
   create(data: {}): RequestPromise
 
-  associate(
-    id: number,
-    objectType: string,
-    associatedObjectId: number
-  ): RequestPromise
+  updateBatch(data: {}[]): RequestPromise
 
-  removeAssociation(
-    id: number,
-    objectType: string,
-    associatedObjectId: number
-  ): RequestPromise
+  associate(id: number, objectType: string, associatedObjectId: number): RequestPromise
+
+  removeAssociation(id: number, objectType: string, associatedObjectId: number): RequestPromise
 
   properties: Properties
 }

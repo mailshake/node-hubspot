@@ -1,6 +1,8 @@
 import { RequestPromise } from 'request-promise'
 
 declare class Properties {
+  getAll(options?: {}): RequestPromise
+
   get(): RequestPromise
 
   getByName(name: string): RequestPromise
@@ -9,9 +11,8 @@ declare class Properties {
 
   update(name: string, data: {}): RequestPromise
 
-  upsert(name: string, data: {}): RequestPromise
+  upsert(data: {}): RequestPromise
 
-  getGroups(): RequestPromise
   getGroups(): RequestPromise
 
   createGroup(data: {}): void
@@ -20,7 +21,7 @@ declare class Properties {
 
   deleteGroup(name: string): void
 
-  delete(name: string): void
+  delete(name: string): RequestPromise
 }
 
 export { Properties }

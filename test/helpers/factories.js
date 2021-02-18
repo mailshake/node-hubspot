@@ -1,9 +1,9 @@
-const createTestContact = hubspot =>
+const createTestContact = (hubspot) =>
   hubspot.contacts.create({
     properties: [
       {
         property: 'email',
-        value: 'node-hubspot' + Date.now() + '@madkudu.com',
+        value: `node-hubspot${Date.now()}@madkudu.com`,
       },
       {
         property: 'firstname',
@@ -23,7 +23,6 @@ const createTestContact = hubspot =>
       },
     ],
   })
-const deleteTestContact = (hubspot, contactId) =>
-  hubspot.contacts.delete(contactId)
+const deleteTestContact = (hubspot, contactId) => hubspot.contacts.delete(contactId)
 
 module.exports = { createTestContact, deleteTestContact }
