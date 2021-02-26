@@ -13,7 +13,7 @@ declare class List {
 
   getContacts(id: number, opts?: {}): RequestPromise
 
-  getRecentContacts(id: number): RequestPromise
+  getRecentContacts(id: number, opts?: {}): RequestPromise
 
   getRecentUpdates(opts?: {}): RequestPromise
 
