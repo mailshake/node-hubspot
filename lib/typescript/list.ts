@@ -5,9 +5,9 @@ declare class List {
 
   getOne(id: number): RequestPromise
 
-  getContacts(id: number): RequestPromise
+  getContacts(id: number, opts?: {}): RequestPromise
 
-  getRecentContacts(id: number): RequestPromise
+  getRecentContacts(id: number, opts?: {}): RequestPromise
 
   addContacts(id: number, contactBody: {}): RequestPromise
 }
