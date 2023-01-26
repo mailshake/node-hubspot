@@ -8,6 +8,8 @@ declare class Engagement {
   getRecentlyModified(opts?: {}): RequestPromise
 
   getAssociated(objectType: string, objectId: number, opts?: {}): RequestPromise
+
+  getCallDispositions(): RequestPromise
 }
 
 export { Engagement }
