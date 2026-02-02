@@ -12,16 +12,23 @@ describe('lists', function() {
   const deleteTestList = listId => hubspot.lists.delete(listId)
 
   describe('get', function() {
+    // v3: POST /crm/v3/lists/search
     const listsEndpoint = {
-      path: '/contacts/v1/lists',
-      response: { lists: [] },
+      path: '/crm/v3/lists/search',
+      request: { listIds: [], offset: 0, count: 20 },
+      response: {
+        results: [{ listId: '123', name: 'Test List', size: 10 }],
+      },
     }
-    fakeHubspotApi.setupServer({ getEndpoints: [listsEndpoint] })
+    fakeHubspotApi.setupServer({ postEndpoints: [listsEndpoint] })
 
     it('should return contact lists', function() {
       return hubspot.lists.get().then(data => {
         expect(data).to.be.a('object')
         expect(data.lists).to.be.a('array')
+        // Verify v1 format
+        expect(data.lists[0].listId).to.equal(123)
+        expect(data.lists[0].name).to.equal('Test List')
       })
     })
   })
@@ -29,9 +36,14 @@ describe('lists', function() {
   describe('getOne', function() {
     describe('when passed a listId', function() {
       let listId = 123
+      // v3: GET /crm/v3/lists/{listId}
       const listEndpoint = {
-        path: `/contacts/v1/lists/${listId}`,
-        response: listProperties,
+        path: `/crm/v3/lists/${listId}`,
+        response: {
+          listId: String(listId),
+          name: listProperties.name,
+          size: 5,
+        },
       }
       fakeHubspotApi.setupServer({ getEndpoints: [listEndpoint] })
 
@@ -52,6 +64,7 @@ describe('lists', function() {
         return hubspot.lists.getOne(listId).then(data => {
           expect(data).to.be.a('object')
           expect(data.name).to.equal(listProperties.name)
+          expect(data.listId).to.equal(123)
         })
       })
     })
@@ -72,10 +85,15 @@ describe('lists', function() {
 
   describe('create', function() {
     let listId
+    // v3: POST /crm/v3/lists
     const createListEndpoint = {
-      path: '/contacts/v1/lists',
-      request: listProperties,
-      response: listProperties,
+      path: '/crm/v3/lists',
+      request: {
+        objectTypeId: '0-1',
+        processingType: 'MANUAL',
+        name: listProperties.name,
+      },
+      response: { listId: '456', name: listProperties.name, size: 0 },
     }
     fakeHubspotApi.setupServer({ postEndpoints: [createListEndpoint] })
 
@@ -89,14 +107,16 @@ describe('lists', function() {
       return hubspot.lists.create(listProperties).then(data => {
         listId = data.listId
         expect(data).to.be.a('object')
+        expect(data.listId).to.equal(456)
       })
     })
   })
 
   describe('delete', function() {
-    let listId
+    let listId = 123
+    // v3: DELETE /crm/v3/lists/{listId}
     const deleteListEndpoint = {
-      path: `/contacts/v1/lists/${listId}`,
+      path: `/crm/v3/lists/${listId}`,
       statusCode: 204,
     }
     fakeHubspotApi.setupServer({ deleteEndpoints: [deleteListEndpoint] })
@@ -119,9 +139,15 @@ describe('lists', function() {
   describe('getContacts', function() {
     describe('when passed a listId', function() {
       let listId = 123
+      // v3: GET /crm/v3/lists/{listId}/memberships
       const listContactsEndpoint = {
-        path: `/contacts/v1/lists/${listId}/contacts/all`,
-        response: { contacts: [] },
+        path: `/crm/v3/lists/${listId}/memberships`,
+        response: {
+          results: [
+            { recordId: '100', membershipTimestamp: '2024-01-01T00:00:00Z' },
+            { recordId: '101', membershipTimestamp: '2024-01-02T00:00:00Z' },
+          ],
+        },
       }
       fakeHubspotApi.setupServer({ getEndpoints: [listContactsEndpoint] })
 
@@ -142,6 +168,7 @@ describe('lists', function() {
         return hubspot.lists.getContacts(listId).then(data => {
           expect(data).to.be.a('object')
           expect(data.contacts).to.be.an('array')
+          expect(data.contacts[0].vid).to.equal(100)
         })
       })
     })
@@ -163,9 +190,14 @@ describe('lists', function() {
   describe('getRecentContacts', function() {
     describe('when passed a listId', function() {
       let listId = 123
+      // v3: GET /crm/v3/lists/{listId}/memberships/join-order
       const listContactsEndpoint = {
-        path: `/contacts/v1/lists/${listId}/contacts/recent`,
-        response: { contacts: [] },
+        path: `/crm/v3/lists/${listId}/memberships/join-order`,
+        response: {
+          results: [
+            { recordId: '200', membershipTimestamp: '2024-01-05T00:00:00Z' },
+          ],
+        },
       }
       fakeHubspotApi.setupServer({ getEndpoints: [listContactsEndpoint] })
 
@@ -186,6 +218,7 @@ describe('lists', function() {
         return hubspot.lists.getRecentContacts(listId).then(data => {
           expect(data).to.be.a('object')
           expect(data.contacts).to.be.an('array')
+          expect(data.contacts[0].vid).to.equal(200)
         })
       })
     })
@@ -208,12 +241,13 @@ describe('lists', function() {
     describe('when a id and contactBody is provided', function() {
       let listId = 123
       let contactId = 234
+      // v3: PUT /crm/v3/lists/{listId}/memberships/add
       const addContactToListEndpoint = {
-        path: `/contacts/v1/lists/${listId}/add`,
-        request: { vids: [contactId] },
-        response: { contacts: [] },
+        path: `/crm/v3/lists/${listId}/memberships/add`,
+        request: [contactId],
+        response: {},
       }
-      fakeHubspotApi.setupServer({ postEndpoints: [addContactToListEndpoint] })
+      fakeHubspotApi.setupServer({ putEndpoints: [addContactToListEndpoint] })
 
       before(function() {
         if (process.env.NOCK_OFF) {

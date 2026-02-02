@@ -26,9 +26,10 @@ describe('contacts.properties', function() {
     hubspot.contacts.properties.create(properties)
 
   describe('get', function() {
+    // v3: GET /crm/v3/properties/contacts returns { results: [...] }
     const getAllEndpoint = {
-      path: '/properties/v1/contacts/properties',
-      response: [{}],
+      path: '/crm/v3/properties/contacts',
+      response: { results: [{}] },
     }
     fakeHubspotApi.setupServer({ getEndpoints: [getAllEndpoint] })
 
@@ -41,9 +42,10 @@ describe('contacts.properties', function() {
   })
 
   describe('getAll', function() {
+    // v3: GET /crm/v3/properties/contacts
     const getAllEndpoint = {
-      path: '/properties/v1/contacts/properties',
-      response: [{}],
+      path: '/crm/v3/properties/contacts',
+      response: { results: [{}] },
     }
     fakeHubspotApi.setupServer({ getEndpoints: [getAllEndpoint] })
 
@@ -56,10 +58,9 @@ describe('contacts.properties', function() {
   })
 
   describe('getByName', function() {
+    // v3: GET /crm/v3/properties/contacts/{propertyName}
     const getByNameEndpoint = {
-      path: `/properties/v1/contacts/properties/named/${
-        contactPropertyProperties.name
-      }`,
+      path: `/crm/v3/properties/contacts/${contactPropertyProperties.name}`,
       response: contactPropertyProperties,
     }
     fakeHubspotApi.setupServer({ getEndpoints: [getByNameEndpoint] })
@@ -86,10 +87,9 @@ describe('contacts.properties', function() {
   })
 
   describe('delete', function() {
+    // v3: DELETE /crm/v3/properties/contacts/{propertyName}
     const deleteEndpoint = {
-      path: `/properties/v1/contacts/properties/named/${
-        contactPropertyProperties.name
-      }`,
+      path: `/crm/v3/properties/contacts/${contactPropertyProperties.name}`,
       statusCode: 204,
     }
     fakeHubspotApi.setupServer({ deleteEndpoints: [deleteEndpoint] })
@@ -110,8 +110,9 @@ describe('contacts.properties', function() {
   })
 
   describe('create', function() {
+    // v3: POST /crm/v3/properties/contacts
     const createEndpoint = {
-      path: '/properties/v1/contacts/properties',
+      path: '/crm/v3/properties/contacts',
       response: contactPropertyProperties,
     }
     fakeHubspotApi.setupServer({ postEndpoints: [createEndpoint] })
@@ -133,13 +134,12 @@ describe('contacts.properties', function() {
 
   describe('update', function() {
     const description = 'Updated display name'
+    // v3: PATCH /crm/v3/properties/contacts/{propertyName}
     const updateEndpoint = {
-      path: `/properties/v1/contacts/properties/named/${
-        contactPropertyProperties.name
-      }`,
+      path: `/crm/v3/properties/contacts/${contactPropertyProperties.name}`,
       response: Object.assign({}, contactPropertyProperties, { description }),
     }
-    fakeHubspotApi.setupServer({ putEndpoints: [updateEndpoint] })
+    fakeHubspotApi.setupServer({ patchEndpoints: [updateEndpoint] })
 
     before(function() {
       if (process.env.NOCK_OFF) {
@@ -167,8 +167,9 @@ describe('contacts.properties', function() {
 
   describe('upsert', function() {
     describe("when the record doesn't exists", function() {
+      // v3: POST /crm/v3/properties/contacts
       const createEndpoint = {
-        path: '/properties/v1/contacts/properties',
+        path: '/crm/v3/properties/contacts',
         response: contactPropertyProperties,
       }
       fakeHubspotApi.setupServer({ postEndpoints: [createEndpoint] })
@@ -192,19 +193,18 @@ describe('contacts.properties', function() {
 
     describe('when the record already exists', function() {
       const description = 'Updated display name'
+      // v3: POST returns 409, then PATCH
       const createEndpoint = {
-        path: '/properties/v1/contacts/properties',
+        path: '/crm/v3/properties/contacts',
         statusCode: 409,
       }
       const updateEndpoint = {
-        path: `/properties/v1/contacts/properties/named/${
-          contactPropertyProperties.name
-        }`,
+        path: `/crm/v3/properties/contacts/${contactPropertyProperties.name}`,
         response: Object.assign({}, contactPropertyProperties, { description }),
       }
       fakeHubspotApi.setupServer({
         postEndpoints: [createEndpoint],
-        putEndpoints: [updateEndpoint],
+        patchEndpoints: [updateEndpoint],
       })
 
       before(function() {
@@ -230,9 +230,10 @@ describe('contacts.properties', function() {
 
   describe('groups', () => {
     describe('getGroups', () => {
+      // v3: GET /crm/v3/properties/contacts/groups returns { results: [...] }
       const getGroupsEndpoint = {
-        path: '/properties/v1/contacts/groups',
-        response: [],
+        path: '/crm/v3/properties/contacts/groups',
+        response: { results: [] },
       }
       fakeHubspotApi.setupServer({ getEndpoints: [getGroupsEndpoint] })
 
@@ -245,8 +246,9 @@ describe('contacts.properties', function() {
 
     describe('createGroup', function() {
       const name = 'test_group'
+      // v3: POST /crm/v3/properties/contacts/groups
       const createGroupEndpoint = {
-        path: '/properties/v1/contacts/groups',
+        path: '/crm/v3/properties/contacts/groups',
         response: {},
       }
       fakeHubspotApi.setupServer({ postEndpoints: [createGroupEndpoint] })
@@ -267,12 +269,13 @@ describe('contacts.properties', function() {
     describe('updateGroup', function() {
       const name = 'test_group'
       const displayName = 'Updated display name'
+      // v3: PATCH /crm/v3/properties/contacts/groups/{groupName}
       const updateGroupEndpoint = {
-        path: `/properties/v1/contacts/groups/named/${name}`,
+        path: `/crm/v3/properties/contacts/groups/${name}`,
         request: { displayName },
         response: { name, displayName },
       }
-      fakeHubspotApi.setupServer({ putEndpoints: [updateGroupEndpoint] })
+      fakeHubspotApi.setupServer({ patchEndpoints: [updateGroupEndpoint] })
 
       before(function() {
         if (process.env.NOCK_OFF) {
@@ -297,8 +300,9 @@ describe('contacts.properties', function() {
 
     describe('deleteGroup', function() {
       const name = 'test_group'
+      // v3: DELETE /crm/v3/properties/contacts/groups/{groupName}
       const deleteGroupEndpoint = {
-        path: `/properties/v1/contacts/groups/named/${name}`,
+        path: `/crm/v3/properties/contacts/groups/${name}`,
         statusCode: 204,
       }
       fakeHubspotApi.setupServer({ deleteEndpoints: [deleteGroupEndpoint] })
