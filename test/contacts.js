@@ -3,6 +3,13 @@ const fakeHubspotApi = require('./helpers/fake_hubspot_api')
 const { createTestContact, deleteTestContact } = require('./helpers/factories')
 
 const Hubspot = require('..')
+const emailsFromContacts = contacts =>
+  contacts.flatMap(contact =>
+    contact['identity-profiles'].map(
+      profile =>
+        profile.identities.find(identity => identity.type === 'EMAIL').value
+    )
+  )
 
 describe('contacts', function() {
   const hubspot = new Hubspot({
@@ -11,22 +18,14 @@ describe('contacts', function() {
 
   describe('get', function() {
     const count = 10
-    // v3 endpoint: GET /crm/v3/objects/contacts
     const contactsGetEndpoint = {
-      path: '/crm/v3/objects/contacts',
-      response: {
-        results: [{ id: '123', properties: { email: 'test@test.com' } }],
-      },
+      path: '/contacts/v1/lists/all/contacts/all',
+      response: { contacts: [{}] },
     }
     const tenContactsGetEndpoint = {
-      path: '/crm/v3/objects/contacts',
-      response: {
-        results: Array(10)
-          .fill()
-          .map((_, i) => ({ id: String(i), properties: {} })),
-        paging: { next: { after: '10' } },
-      },
-      query: { limit: count },
+      path: '/contacts/v1/lists/all/contacts/all',
+      response: { contacts: [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}] },
+      query: { count },
     }
     fakeHubspotApi.setupServer({
       getEndpoints: [contactsGetEndpoint, tenContactsGetEndpoint],
@@ -37,8 +36,6 @@ describe('contacts', function() {
         expect(data).to.be.a('object')
         expect(data.contacts).to.be.a('array')
         expect(data.contacts[0]).to.be.an('object')
-        // Verify v1 format: vid instead of id
-        expect(data.contacts[0].vid).to.equal(123)
       })
     })
 
@@ -46,69 +43,47 @@ describe('contacts', function() {
       return hubspot.contacts.get({ count }).then(data => {
         expect(data).to.be.a('object')
         expect(data.contacts).to.be.a('array')
-        expect(data['has-more']).to.equal(true)
-        expect(data['vid-offset']).to.equal(10)
       })
     })
   })
 
   describe('getRecentlyModified', function() {
-    // v3: Uses search with sort
-    const recentlyModifiedContactsEndpoint = {
-      path: '/crm/v3/objects/contacts/search',
-      request: {
-        sorts: [{ propertyName: 'lastmodifieddate', direction: 'DESCENDING' }],
-        limit: 100,
-      },
-      response: {
-        results: [{ id: '123', properties: { email: 'test@test.com' } }],
-      },
+    const recentlyModifiedContactsGetEndpoint = {
+      path: '/contacts/v1/lists/recently_updated/contacts/recent',
+      response: { contacts: [{}] },
     }
     fakeHubspotApi.setupServer({
-      postEndpoints: [recentlyModifiedContactsEndpoint],
+      getEndpoints: [recentlyModifiedContactsGetEndpoint],
     })
 
     it('should return a list of contacts', function() {
       return hubspot.contacts.getRecentlyModified().then(data => {
         expect(data.contacts).to.be.an('array')
-        expect(data.contacts[0].vid).to.equal(123)
       })
     })
   })
 
   describe('getRecentlyCreated', function() {
-    // v3: Uses search with sort
-    const recentlyCreatedContactsEndpoint = {
-      path: '/crm/v3/objects/contacts/search',
-      request: {
-        sorts: [{ propertyName: 'createdate', direction: 'DESCENDING' }],
-        limit: 100,
-      },
-      response: {
-        results: [{ id: '456', properties: { email: 'new@test.com' } }],
-      },
+    const recentlyCreatedContactsGetEndpoint = {
+      path: '/contacts/v1/lists/all/contacts/recent',
+      response: { contacts: [{}] },
     }
     fakeHubspotApi.setupServer({
-      postEndpoints: [recentlyCreatedContactsEndpoint],
+      getEndpoints: [recentlyCreatedContactsGetEndpoint],
     })
 
     it('should return a list of contacts', function() {
       return hubspot.contacts.getRecentlyCreated().then(data => {
         expect(data.contacts).to.be.an('array')
-        expect(data.contacts[0].vid).to.equal(456)
       })
     })
   })
 
   describe('getById', function() {
     let contactId = 123
-    // v3: GET /crm/v3/objects/contacts/{id}
     const contactByIdEndpoint = {
-      path: `/crm/v3/objects/contacts/${contactId}`,
-      response: {
-        id: String(contactId),
-        properties: { email: 'test@test.com' },
-      },
+      path: `/contacts/v1/contact/vid/${contactId}/profile`,
+      response: { vid: contactId },
     }
     fakeHubspotApi.setupServer({ getEndpoints: [contactByIdEndpoint] })
 
@@ -132,17 +107,12 @@ describe('contacts', function() {
 
   describe('getByIdBatch', function() {
     let contactIds = [123, 234, 345]
-    // v3: POST /crm/v3/objects/contacts/batch/read
     const contactsByIdsEndpoint = {
-      path: '/crm/v3/objects/contacts/batch/read',
-      request: {
-        inputs: contactIds.map(id => ({ id: String(id) })),
-      },
-      response: {
-        results: contactIds.map(id => ({ id: String(id), properties: {} })),
-      },
+      path: '/contacts/v1/contact/vids/batch',
+      response: { '123': {}, '234': {}, '345': {} },
+      query: { vid: contactIds },
     }
-    fakeHubspotApi.setupServer({ postEndpoints: [contactsByIdsEndpoint] })
+    fakeHubspotApi.setupServer({ getEndpoints: [contactsByIdsEndpoint] })
 
     before(function() {
       if (process.env.NOCK_OFF) {
@@ -162,20 +132,24 @@ describe('contacts', function() {
 
   describe('getByEmail', function() {
     let email = 'testingapis@hubspot.com'
-    // v3: GET /crm/v3/objects/contacts/{email}?idProperty=email
     const contactByEmailEndpoint = {
-      path: `/crm/v3/objects/contacts/${encodeURIComponent(email)}`,
-      query: { idProperty: 'email' },
-      response: { id: '123', properties: { email: email } },
+      path: `/contacts/v1/contact/email/${email}/profile`,
+      response: { properties: {} },
     }
     fakeHubspotApi.setupServer({ getEndpoints: [contactByEmailEndpoint] })
+
+    before(function() {
+      if (process.env.NOCK_OFF) {
+        return hubspot.contacts.get({ count: 1 }).then(data => {
+          email = emailsFromContacts(data.contacts)[0]
+        })
+      }
+    })
 
     it('should return a contact record based on the email', function() {
       return hubspot.contacts.getByEmail(email).then(data => {
         expect(data).to.be.a('object')
-        expect(data.vid).to.equal(123)
         expect(data.properties).to.be.a('object')
-        expect(data.properties.email.value).to.equal(email)
       })
     })
   })
@@ -185,27 +159,24 @@ describe('contacts', function() {
       'testingapis@hubspot.com',
       'testingapisawesomeandstuff@hubspot.com',
     ]
-    // v3: POST /crm/v3/objects/contacts/batch/read with idProperty
     const contactByEmailsEndpoint = {
-      path: '/crm/v3/objects/contacts/batch/read',
-      request: {
-        idProperty: 'email',
-        inputs: emails.map(email => ({ id: email })),
-      },
-      response: {
-        results: emails.map((email, i) => ({
-          id: String(i + 100),
-          properties: { email: email },
-        })),
-      },
+      path: '/contacts/v1/contact/emails/batch',
+      response: { properties: {} },
+      query: { email: emails },
     }
-    fakeHubspotApi.setupServer({ postEndpoints: [contactByEmailsEndpoint] })
+    fakeHubspotApi.setupServer({ getEndpoints: [contactByEmailsEndpoint] })
+
+    before(function() {
+      if (process.env.NOCK_OFF) {
+        return hubspot.contacts.get({ count: 3 }).then(data => {
+          emails = emailsFromContacts(data.contacts)
+        })
+      }
+    })
 
     it('should return a contact record based on a array of emails', function() {
       return hubspot.contacts.getByEmailBatch(emails).then(data => {
         expect(data).to.be.an('object')
-        // v1 format: keyed by vid
-        expect(Object.keys(data).length).to.equal(2)
       })
     })
   })
@@ -236,13 +207,12 @@ describe('contacts', function() {
         },
       ],
     }
-    // v3: PATCH /crm/v3/objects/contacts/{id}
-    // Note: v3 expects properties as object, not array
     const updateContactEndpoint = {
-      path: `/crm/v3/objects/contacts/${contactId}`,
-      response: { id: String(contactId), properties: {} },
+      path: `/contacts/v1/contact/vid/${contactId}/profile`,
+      request: updateData,
+      statusCode: 204,
     }
-    fakeHubspotApi.setupServer({ patchEndpoints: [updateContactEndpoint] })
+    fakeHubspotApi.setupServer({ postEndpoints: [updateContactEndpoint] })
 
     before(function() {
       if (process.env.NOCK_OFF) {
@@ -275,14 +245,40 @@ describe('contacts', function() {
           property: 'lastname',
           value: 'Schnitt',
         },
+        {
+          property: 'website',
+          value: 'http://hubspot.com',
+        },
+        {
+          property: 'company',
+          value: 'HubSpot',
+        },
+        {
+          property: 'phone',
+          value: '555-122-2323',
+        },
+        {
+          property: 'address',
+          value: '25 First Street',
+        },
+        {
+          property: 'city',
+          value: 'Cambridge',
+        },
+        {
+          property: 'state',
+          value: 'MA',
+        },
+        {
+          property: 'zip',
+          value: '02139',
+        },
       ],
     }
-    // v3: POST /crm/v3/objects/contacts/batch/upsert
     const createOrUpdateContactEndpoint = {
-      path: '/crm/v3/objects/contacts/batch/upsert',
-      response: {
-        results: [{ id: '123', properties: { email: email } }],
-      },
+      path: `/contacts/v1/contact/createOrUpdate/email/${email}`,
+      request: createOrUpdateData,
+      response: {},
     }
     fakeHubspotApi.setupServer({
       postEndpoints: [createOrUpdateContactEndpoint],
@@ -293,19 +289,17 @@ describe('contacts', function() {
         .createOrUpdate(email, createOrUpdateData)
         .then(data => {
           expect(data).to.be.an('object')
-          expect(data.vid).to.equal(123)
         })
     })
   })
 
   describe('create', function() {
     const companyName = 'MadKudu'
-    const testEmail = 'node-hubspot-test@madkudu.com'
     const createData = {
       properties: [
         {
           property: 'email',
-          value: testEmail,
+          value: 'node-hubspot' + Date.now() + '@madkudu.com',
         },
         {
           property: 'firstname',
@@ -337,29 +331,14 @@ describe('contacts', function() {
         },
       ],
     }
-    // v3: POST /crm/v3/objects/contacts
-    // Note: v3 expects properties as object, so we match against converted format
     const createContactEndpoint = {
-      path: '/crm/v3/objects/contacts',
-      request: {
-        properties: {
-          email: testEmail,
-          firstname: 'Try',
-          lastname: 'MadKudu',
-          website: 'http://www.madkudu.com',
-          company: companyName,
-        },
-      },
-      response: { id: '789', properties: { company: companyName } },
+      path: '/contacts/v1/contact',
+      request: createData,
+      response: { properties: { company: { value: companyName } } },
     }
     const createExisitingContactEndpoint = {
-      path: '/crm/v3/objects/contacts',
-      request: {
-        properties: {
-          email: 'node-hubspot@hubspot.com',
-          firstname: 'Test',
-        },
-      },
+      path: '/contacts/v1/contact',
+      request: createErrorData,
       responseError: 'Contact already exists',
     }
     fakeHubspotApi.setupServer({
@@ -369,7 +348,6 @@ describe('contacts', function() {
     it('should create a new contact', function() {
       return hubspot.contacts.create(createData).then(data => {
         expect(data).to.be.an('object')
-        expect(data.vid).to.equal(789)
         expect(data.properties.company.value).to.equal('MadKudu')
       })
     })
@@ -382,18 +360,16 @@ describe('contacts', function() {
         })
         .catch(err => {
           expect(err instanceof Error).to.equal(true)
-          // nock replyWithError wraps the message
-          expect(err.message).to.include('Contact already exists')
+          expect(err.error.message).to.equal('Contact already exists')
         })
     })
   })
 
   describe('delete', function() {
     let contactId = 123
-    // v3: DELETE /crm/v3/objects/contacts/{id}
     const deleteContactEndpoint = {
-      path: `/crm/v3/objects/contacts/${contactId}`,
-      response: {},
+      path: `/contacts/v1/contact/vid/${contactId}`,
+      response: { vid: contactId },
     }
     fakeHubspotApi.setupServer({ deleteEndpoints: [deleteContactEndpoint] })
 
@@ -414,10 +390,10 @@ describe('contacts', function() {
     const contactIds = [123, 234, 345]
     const properties = [{ property: 'company', value: 'MadKudu ' }]
     let createOrUpdateData = contactIds.map(vid => ({ vid, properties }))
-    // v3: POST /crm/v3/objects/contacts/batch/upsert
     const createOrUpdateContactsEndpoint = {
-      path: '/crm/v3/objects/contacts/batch/upsert',
-      response: { results: [] },
+      path: '/contacts/v1/contact/batch',
+      statusCode: 204,
+      request: createOrUpdateData,
     }
     fakeHubspotApi.setupServer({
       postEndpoints: [createOrUpdateContactsEndpoint],
@@ -445,22 +421,17 @@ describe('contacts', function() {
 
   describe('search', function() {
     const query = 'example'
-    // v3: POST /crm/v3/objects/contacts/search
     const searchContactsEndpoint = {
-      path: '/crm/v3/objects/contacts/search',
-      request: { query: query, limit: 100 },
-      response: {
-        results: [{ id: '123', properties: { email: 'example@test.com' } }],
-        total: 1,
-      },
+      path: '/contacts/v1/search/query',
+      query: { q: query },
+      response: { contacts: [{}], query },
     }
-    fakeHubspotApi.setupServer({ postEndpoints: [searchContactsEndpoint] })
+    fakeHubspotApi.setupServer({ getEndpoints: [searchContactsEndpoint] })
 
     it("should return contacts and some data associated with those contacts by the contact's email address or name.", function() {
       return hubspot.contacts.search('example').then(data => {
         expect(data.contacts).to.be.a('array')
         expect(data.query).to.equal('example')
-        expect(data.contacts[0].vid).to.equal(123)
       })
     })
   })
