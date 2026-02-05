@@ -41,7 +41,7 @@ describe('v3_compat (Lists API)', function() {
     })
 
     it('should handle null input', function() {
-      expect(convertListToV1(null)).to.be.null
+      expect(convertListToV1(null)).to.equal(null)
     })
   })
 
@@ -71,7 +71,7 @@ describe('v3_compat (Lists API)', function() {
       }
       const result = convertListsToV1(v3Response)
       expect(result['has-more']).to.equal(false)
-      expect(result.offset).to.be.null
+      expect(result.offset).to.equal(null)
     })
 
     it('should pass through if already in v1 format', function() {
@@ -99,7 +99,9 @@ describe('v3_compat (Lists API)', function() {
 
     it('should produce has-more and vid-offset for pagination', function() {
       const v3Response = {
-        results: [{ recordId: '100', membershipTimestamp: '2024-01-01T00:00:00Z' }],
+        results: [
+          { recordId: '100', membershipTimestamp: '2024-01-01T00:00:00Z' },
+        ],
         paging: { next: { after: '300' } },
       }
       const result = convertListMembershipsToV1(v3Response)

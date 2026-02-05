@@ -139,8 +139,10 @@ describe('lists', function() {
   describe('getContacts', function() {
     describe('when passed a listId', function() {
       let listId = 123
-      // v3: GET /crm/v3/lists/{listId}/memberships
-      const listContactsEndpoint = {
+      // v3 two-call pattern:
+      // 1. GET /crm/v3/lists/{listId}/memberships - returns IDs only
+      // 2. POST /crm/v3/objects/contacts/batch/read - fetches full contacts
+      const listMembershipsEndpoint = {
         path: `/crm/v3/lists/${listId}/memberships`,
         response: {
           results: [
@@ -149,7 +151,37 @@ describe('lists', function() {
           ],
         },
       }
-      fakeHubspotApi.setupServer({ getEndpoints: [listContactsEndpoint] })
+      const batchReadContactsEndpoint = {
+        path: '/crm/v3/objects/contacts/batch/read',
+        request: {
+          inputs: [{ id: '100' }, { id: '101' }],
+          properties: ['email', 'firstname', 'lastname'],
+        },
+        response: {
+          results: [
+            {
+              id: '100',
+              properties: {
+                email: 'user100@test.com',
+                firstname: 'John',
+                lastname: 'Doe',
+              },
+            },
+            {
+              id: '101',
+              properties: {
+                email: 'user101@test.com',
+                firstname: 'Jane',
+                lastname: 'Smith',
+              },
+            },
+          ],
+        },
+      }
+      fakeHubspotApi.setupServer({
+        getEndpoints: [listMembershipsEndpoint],
+        postEndpoints: [batchReadContactsEndpoint],
+      })
 
       before(function() {
         if (process.env.NOCK_OFF) {
@@ -164,11 +196,25 @@ describe('lists', function() {
         }
       })
 
-      it('should return contacts', function() {
+      it('should return contacts with full v1-style properties', function() {
         return hubspot.lists.getContacts(listId).then(data => {
           expect(data).to.be.a('object')
           expect(data.contacts).to.be.an('array')
+          expect(data.contacts).to.have.lengthOf(2)
           expect(data.contacts[0].vid).to.equal(100)
+          // Verify v1-style properties format
+          expect(data.contacts[0].properties.email.value).to.equal(
+            'user100@test.com'
+          )
+          expect(data.contacts[0].properties.firstname.value).to.equal('John')
+          // Verify identity-profiles
+          expect(data.contacts[0]['identity-profiles']).to.be.an('array')
+          expect(
+            data.contacts[0]['identity-profiles'][0].identities[0].type
+          ).to.equal('EMAIL')
+          expect(
+            data.contacts[0]['identity-profiles'][0].identities[0].value
+          ).to.equal('user100@test.com')
         })
       })
     })
@@ -190,8 +236,10 @@ describe('lists', function() {
   describe('getRecentContacts', function() {
     describe('when passed a listId', function() {
       let listId = 123
-      // v3: GET /crm/v3/lists/{listId}/memberships/join-order
-      const listContactsEndpoint = {
+      // v3 two-call pattern:
+      // 1. GET /crm/v3/lists/{listId}/memberships/join-order - returns IDs only
+      // 2. POST /crm/v3/objects/contacts/batch/read - fetches full contacts
+      const listMembershipsEndpoint = {
         path: `/crm/v3/lists/${listId}/memberships/join-order`,
         response: {
           results: [
@@ -199,7 +247,29 @@ describe('lists', function() {
           ],
         },
       }
-      fakeHubspotApi.setupServer({ getEndpoints: [listContactsEndpoint] })
+      const batchReadContactsEndpoint = {
+        path: '/crm/v3/objects/contacts/batch/read',
+        request: {
+          inputs: [{ id: '200' }],
+          properties: ['email', 'firstname', 'lastname'],
+        },
+        response: {
+          results: [
+            {
+              id: '200',
+              properties: {
+                email: 'user200@test.com',
+                firstname: 'Recent',
+                lastname: 'Contact',
+              },
+            },
+          ],
+        },
+      }
+      fakeHubspotApi.setupServer({
+        getEndpoints: [listMembershipsEndpoint],
+        postEndpoints: [batchReadContactsEndpoint],
+      })
 
       before(function() {
         if (process.env.NOCK_OFF) {
@@ -214,11 +284,20 @@ describe('lists', function() {
         }
       })
 
-      it('should return contacts', function() {
+      it('should return contacts with full v1-style properties', function() {
         return hubspot.lists.getRecentContacts(listId).then(data => {
           expect(data).to.be.a('object')
           expect(data.contacts).to.be.an('array')
           expect(data.contacts[0].vid).to.equal(200)
+          // Verify v1-style properties format
+          expect(data.contacts[0].properties.email.value).to.equal(
+            'user200@test.com'
+          )
+          // Verify identity-profiles
+          expect(data.contacts[0]['identity-profiles']).to.be.an('array')
+          expect(
+            data.contacts[0]['identity-profiles'][0].identities[0].type
+          ).to.equal('EMAIL')
         })
       })
     })
