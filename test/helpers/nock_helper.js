@@ -65,6 +65,11 @@ class NockHelper {
     mockEndpoint(parameters)
   }
 
+  mockPatchEndpoint(parameters) {
+    parameters.verb = 'PATCH'
+    mockEndpoint(parameters)
+  }
+
   resetNock() {
     nock.cleanAll()
     nock.enableNetConnect()
